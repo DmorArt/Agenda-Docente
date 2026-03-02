@@ -1,0 +1,607 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Plus, 
+  Trash2, 
+  Calendar as CalendarIcon, 
+  Users, 
+  Clock, 
+  X,
+  BookOpen, 
+  Settings,
+  Check,
+  CalendarDays,
+  CalendarCheck,
+  School,
+  ChevronDown,
+  Coffee,
+  Pencil,
+  PlusCircle,
+  Building2,
+  LayoutGrid,
+  ChevronRight,
+  AlertTriangle,
+  Info,
+  MapPin,
+  Palette,
+  Beaker,
+  Hash,
+  Calendar as CalendarLucide
+} from 'lucide-react';
+
+// --- CONFIGURACIÓN Y CONSTANTES ---
+const THEME = {
+  bgApp: '#f1f5f9',
+  surface: '#ffffff',
+  primary: '#4f46e5', 
+  primaryDark: '#0f172a', 
+  agendaGeneralBg: '#e2e8f0', // Gris claro solicitado
+  radius: 'rounded-[2.5rem]' 
+};
+
+const DAYS_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const HOURS = Array.from({ length: 11 }, (_, i) => i + 7); 
+
+const SESSION_COLORS = [
+  { id: 'indigo', hex: '#6366f1', label: 'Teórico' },
+  { id: 'emerald', hex: '#10b981', label: 'Práctico' },
+  { id: 'rose', hex: '#f43f5e', label: 'Examen' },
+  { id: 'amber', hex: '#f59e0b', label: 'Especial' },
+  { id: 'sky', hex: '#0ea5e9', label: 'Virtual' }
+];
+
+const INST_PALETTE = [
+  '#FFF59D', '#FFCC80', '#FF708D', '#6D4C8E', '#422F52',
+  '#2D1B33', '#5E445D', '#949B6A', '#CCE283', '#F9F5D7'
+];
+
+const SUBJECT_CATALOG = {
+  EBI: ["Matemática", "Lengua Española", "Ciencias Físicas", "Biología", "Geografía", "Historia", "Inglés", "Educación Física", "Informática"],
+  EMS: ["Matemática", "Literatura", "Filosofía", "Inglés", "Física", "Química", "Biología", "Historia", "Sociología", "Derecho", "STEM"],
+  PAI_IB: ["Lengua y Literatura (PAI)", "Adquisición de Lenguas (PAI)", "Individuos y Sociedades (PAI)", "Ciencias (PAI)", "Matemáticas (PAI)", "Artes (PAI)", "Diseño (PAI)"],
+  DIPLOMA_IB: ["TdC", "Monografía", "CAS", "Literatura NS/NM", "Inglés B NS/NM", "Gestión de Negocios", "Sistemas Ambientales", "Biología NS/NM", "Física NS/NM", "Matemáticas: Análisis"],
+  Talleres: ["Robótica", "Programación", "Teatro", "Danza", "Cocina", "Carpintería"]
+};
+
+const GROUP_PRESETS = {
+  EBI: [
+    { label: '7º', suffix: 'EBI', color: '#3b82f6' },
+    { label: '8º', suffix: 'EBI', color: '#6366f1' },
+    { label: '9º', suffix: 'EBI', color: '#8b5cf6' }
+  ],
+  EMS: [
+    { label: '1º', suffix: 'EMS', color: '#ec4899' },
+    { label: '2º', suffix: 'EMS', color: '#f43f5e' },
+    { label: '3º', suffix: 'EMS', color: '#8b5cf6' }
+  ]
+};
+
+const App = () => {
+  const [institutions, setInstitutions] = useState([]);
+  const [activeInstId, setActiveInstId] = useState('all'); 
+  const [sessions, setSessions] = useState([]);
+  const [groups, setGroups] = useState([]);
+
+  const [showAddSession, setShowAddSession] = useState(false);
+  const [showAddInstModal, setShowAddInstModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [tempInstName, setTempInstName] = useState("");
+  const [isManualSubject, setIsManualSubject] = useState(false);
+  const [showGroupCreator, setShowGroupCreator] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  const activeInst = institutions.find(i => i.id === activeInstId) || null;
+
+  const [form, setForm] = useState({
+    subject: '',
+    groupId: '',
+    day: 'Lunes',
+    startModuleId: 1,
+    endModuleId: 1,
+    color: SESSION_COLORS[0].hex
+  });
+
+  // Formateador de fecha para la cabecera
+  const formattedDate = useMemo(() => {
+    return new Intl.DateTimeFormat('es-ES', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long' 
+    }).format(currentTime);
+  }, [currentTime]);
+
+  const formattedTime = useMemo(() => {
+    return currentTime.toLocaleTimeString('es-ES', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+  }, [currentTime]);
+
+  useEffect(() => {
+    const savedInst = localStorage.getItem('inst_perfiles_v17');
+    const savedSessions = localStorage.getItem('inst_sesiones_v17');
+    const savedGroups = localStorage.getItem('inst_grupos_v17');
+    if (savedInst) setInstitutions(JSON.parse(savedInst));
+    if (savedSessions) setSessions(JSON.parse(savedSessions));
+    if (savedGroups) setGroups(JSON.parse(savedGroups));
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('inst_perfiles_v17', JSON.stringify(institutions));
+    localStorage.setItem('inst_sesiones_v17', JSON.stringify(sessions));
+    localStorage.setItem('inst_grupos_v17', JSON.stringify(groups));
+  }, [institutions, sessions, groups]);
+
+  const timeToMin = (t) => {
+    if (!t) return 0;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const modulesList = useMemo(() => {
+    const modules = [];
+    const instRef = activeInst || (institutions.length > 0 ? institutions[0] : { moduleDuration: 45, breaks: [] });
+    let currentStart = 7 * 60 + 45; 
+    
+    for (let i = 1; i <= 13; i++) {
+      const format = (h, m) => `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      const startStr = format(Math.floor(currentStart / 60), currentStart % 60);
+      const endStr = format(Math.floor((currentStart + (instRef.moduleDuration || 45)) / 60), (currentStart + (instRef.moduleDuration || 45)) % 60);
+      
+      modules.push({ id: i, label: `M${i}`, start: startStr, end: endStr });
+
+      currentStart += (instRef.moduleDuration || 45);
+      const breakFound = instRef.breaks?.find(b => b.afterModule === i);
+      if (breakFound) currentStart += breakFound.minutes;
+    }
+    return modules;
+  }, [activeInst, institutions]);
+
+  const conflicts = useMemo(() => {
+    const conflictIds = new Set();
+    sessions.forEach((s1, i) => {
+      sessions.slice(i + 1).forEach(s2 => {
+        if (s1.day === s2.day) {
+          const start1 = timeToMin(s1.startTime);
+          const end1 = timeToMin(s1.endTime);
+          const start2 = timeToMin(s2.startTime);
+          const end2 = timeToMin(s2.endTime);
+          if (start1 < end2 && end1 > start2) {
+            conflictIds.add(s1.id);
+            conflictIds.add(s2.id);
+          }
+        }
+      });
+    });
+    return conflictIds;
+  }, [sessions]);
+
+  const handleConfirmAddInstitution = () => {
+    if (!tempInstName.trim()) return;
+    const newInst = { id: Date.now().toString(), name: tempInstName, moduleDuration: 45, breaks: [], color: INST_PALETTE[institutions.length % INST_PALETTE.length] };
+    setInstitutions([...institutions, newInst]);
+    setActiveInstId(newInst.id);
+    setTempInstName("");
+    setShowAddInstModal(false);
+  };
+
+  const addGroup = (name) => {
+    if (!name || activeInstId === 'all') return;
+    const group = { id: Date.now().toString(), name, instId: activeInstId };
+    setGroups([...groups, group]);
+    setForm({ ...form, groupId: group.id });
+    setShowGroupCreator(false);
+  };
+
+  const updateInstConfig = (updates) => {
+    if (!activeInstId || activeInstId === 'all') return;
+    setInstitutions(institutions.map(inst => inst.id === activeInstId ? { ...inst, ...updates } : inst));
+  };
+
+  const saveSession = () => {
+    if (!form.groupId || !form.subject || activeInstId === 'all') return;
+    const startM = modulesList.find(m => m.id === form.startModuleId);
+    const endM = modulesList.find(m => m.id === form.endModuleId);
+
+    const sessionData = { 
+      ...form, 
+      instId: activeInstId,
+      startTime: startM.start, 
+      endTime: endM.end,
+      isSingleModule: form.startModuleId === form.endModuleId
+    };
+
+    if (editingSessionId) {
+      setSessions(sessions.map(s => s.id === editingSessionId ? { ...sessionData, id: editingSessionId } : s));
+    } else {
+      setSessions([...sessions, { ...sessionData, id: Date.now().toString() }]);
+    }
+    resetForm();
+  };
+
+  const openEditModal = (session) => {
+    const allSubjects = Object.values(SUBJECT_CATALOG).flat();
+    setForm(session);
+    setIsManualSubject(!allSubjects.includes(session.subject));
+    setEditingSessionId(session.id);
+    setShowAddSession(true);
+  };
+
+  const resetForm = () => {
+    setForm({ subject: '', groupId: '', day: 'Lunes', startModuleId: 1, endModuleId: 1, color: SESSION_COLORS[0].hex });
+    setEditingSessionId(null);
+    setIsManualSubject(false);
+    setShowAddSession(false);
+  };
+
+  const getPosition = (start, end) => {
+    const s = timeToMin(start); const e = timeToMin(end);
+    const calendarBase = 7 * 60; const totalMinutesVisible = 10.5 * 60; 
+    return { top: `${((s - calendarBase) / totalMinutesVisible) * 100}%`, height: `${((e - s) / totalMinutesVisible) * 100}%` };
+  };
+
+  return (
+    <div style={{ backgroundColor: THEME.bgApp }} className="min-h-screen flex flex-col h-screen overflow-hidden antialiased text-slate-900">
+      
+      {/* HEADER ACTUALIZADO CON FECHA Y HORA */}
+      <header className="bg-white border-b border-slate-200 shrink-0 z-30 shadow-sm">
+        <div className="px-8 py-5 flex justify-between items-center">
+          <div className="flex items-center gap-5">
+            <div className="bg-indigo-600 p-3 rounded-[1.2rem] text-white shadow-xl shadow-indigo-100 flex-shrink-0">
+              <CalendarIcon size={24} />
+            </div>
+            <div>
+              <h1 className="font-black text-xl uppercase tracking-tighter leading-none mb-1">Agenda Docente</h1>
+              {/* WIDGET DE FECHA Y HORA PREMIUM */}
+              <div className="flex items-center gap-3 text-slate-400">
+                <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-inner">
+                  <CalendarLucide size={12} className="text-indigo-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{formattedDate}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-inner">
+                  <Clock size={12} className="text-indigo-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{formattedTime}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowAddInstModal(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-full font-black text-xs transition-all uppercase tracking-widest">
+              <PlusCircle size={18} /> Nuevo Centro
+            </button>
+            {activeInstId !== 'all' && institutions.length > 0 && (
+              <button onClick={() => setShowSettings(true)} className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-2xl border border-slate-100 transition-all">
+                <Settings size={22} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="px-8 pb-5 overflow-x-auto flex items-center gap-3 no-scrollbar">
+          <button onClick={() => setActiveInstId('all')} className={`flex items-center gap-2 px-8 py-3.5 rounded-full font-black text-xs uppercase transition-all shadow-sm ${activeInstId === 'all' ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-white text-slate-400 border border-slate-100 hover:border-slate-300'}`}>
+            <LayoutGrid size={16} /> Agenda General
+          </button>
+          <div className="h-6 w-[2px] bg-slate-100 mx-2"></div>
+          {institutions.map(inst => (
+            <button key={inst.id} onClick={() => setActiveInstId(inst.id)} className={`flex items-center gap-2 px-8 py-3.5 rounded-full font-black text-xs uppercase transition-all shadow-sm ${activeInstId === inst.id ? 'bg-white ring-2 ring-indigo-600 text-indigo-600 shadow-xl' : 'bg-white text-slate-400 border border-slate-100'}`}>
+              <div className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: inst.color }}></div>
+              {inst.name}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* ÁREA DE CONTENIDO */}
+      <main className="flex-1 overflow-auto p-6 md:p-8 flex flex-col">
+        {institutions.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in-95">
+             <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-xl border border-indigo-100">
+               <School size={48} />
+             </div>
+             <h2 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tighter">Agenda Vacía</h2>
+             <p className="text-slate-500 text-sm max-w-xs font-bold leading-relaxed mb-8">Comienza añadiendo tu primer centro educativo para organizar tus clases.</p>
+             <button onClick={() => setShowAddInstModal(true)} className="px-10 py-5 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-2xl">Crear Primer Centro</button>
+          </div>
+        ) : (
+          <div className={`${THEME.radius} bg-white shadow-2xl border border-slate-200 flex flex-col h-[950px] min-w-[1100px] overflow-hidden`}>
+            
+            <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] bg-slate-50 border-b border-slate-200 sticky top-0 z-20">
+              <div className="p-6 border-r border-slate-200"></div>
+              {DAYS_ES.map(day => (
+                <div key={day} className="p-6 text-center border-r border-slate-200 last:border-0 font-black text-sm text-slate-800 uppercase tracking-widest">{day}</div>
+              ))}
+            </div>
+
+            <div className="relative grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] flex-1">
+              <div className="bg-slate-50/50 border-r border-slate-200 font-black text-xs text-slate-800">
+                {HOURS.map(h => (
+                  <div key={h} className="h-[9.09%] border-b border-slate-200 flex items-center justify-center bg-white/40">
+                    {h}:00
+                  </div>
+                ))}
+              </div>
+
+              {DAYS_ES.map(day => (
+                <div key={day} className="relative border-r border-slate-100 last:border-0 bg-white">
+                  {sessions
+                    .filter(s => s.day === day && (activeInstId === 'all' || s.instId === activeInstId))
+                    .map(session => {
+                      const pos = getPosition(session.startTime, session.endTime);
+                      const inst = institutions.find(i => i.id === session.instId);
+                      const isGeneral = activeInstId === 'all';
+                      const group = groups.find(g => g.id === session.groupId);
+                      const isCompact = session.isSingleModule;
+                      const hasConflict = conflicts.has(session.id);
+                      
+                      return (
+                        <div 
+                          key={session.id}
+                          className={`group absolute left-1 right-1 rounded-md border-l-[12px] shadow-sm transition-all hover:shadow-2xl hover:z-30 flex flex-col overflow-hidden 
+                            ${isCompact ? 'p-2 justify-center' : 'p-3 md:p-4 justify-between'}
+                            ${hasConflict ? 'ring-4 ring-rose-500 ring-inset animate-pulse bg-rose-50 border-rose-600' : ''}`}
+                          style={{ 
+                            ...pos, 
+                            backgroundColor: hasConflict ? '#fee2e2' : (isGeneral ? THEME.agendaGeneralBg : `${session.color}15`),
+                            borderColor: hasConflict ? '#e11d48' : (inst?.color || THEME.primary)
+                          }}
+                        >
+                          <div className="absolute top-1 right-1 flex opacity-0 group-hover:opacity-100 transition-opacity z-10 gap-0.5">
+                             <button onClick={() => openEditModal(session)} className="p-1.5 bg-white/90 rounded-md text-indigo-600 shadow-sm hover:bg-white"><Pencil size={12}/></button>
+                             <button onClick={() => setSessions(sessions.filter(s => s.id !== session.id))} className="p-1.5 bg-white/90 rounded-md text-rose-500 shadow-sm hover:bg-white"><Trash2 size={12}/></button>
+                          </div>
+
+                          <div className="flex flex-col min-h-0">
+                            <div className="flex items-center gap-1.5">
+                              {hasConflict && <AlertTriangle size={14} className="text-rose-600 shrink-0" />}
+                              <h4 
+                                className={`font-black uppercase leading-tight truncate ${hasConflict ? 'text-rose-900' : 'text-slate-900'} ${isCompact ? 'text-[11px] md:text-xs' : 'text-xs md:text-sm mb-1'}`}
+                                title={session.subject}
+                              >
+                                {session.subject}
+                              </h4>
+                            </div>
+                            <div className={`flex items-center gap-1 font-bold truncate ${isCompact ? 'text-[9px] md:text-[10px]' : 'text-[10px] md:text-xs'} ${hasConflict ? 'text-rose-700' : 'text-slate-600'}`}>
+                              <Users size={isCompact ? 10 : 12} className="shrink-0 opacity-60" />
+                              <span className="truncate">{group?.name || 'S/G'}</span>
+                            </div>
+                          </div>
+
+                          {!isCompact && (
+                            <div className="flex flex-col gap-1 mt-1 pt-1 border-t border-black/5 overflow-hidden">
+                              {isGeneral && (
+                                <div className="flex items-center gap-1 overflow-hidden" style={{ color: hasConflict ? '#e11d48' : (inst?.color) }}>
+                                  <Building2 size={10} className="shrink-0" />
+                                  <span className="text-[9px] font-black uppercase truncate">{inst?.name}</span>
+                                </div>
+                              )}
+                              <div className={`flex items-center gap-1 font-bold text-[9px] md:text-[10px] ${hasConflict ? 'text-rose-600' : 'text-slate-400'}`}>
+                                <Clock size={10} className="shrink-0 opacity-60" /> 
+                                <span className="truncate">{session.startTime}—{session.endTime}</span>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {isCompact && (
+                            <div className={`text-[8px] md:text-[9px] font-black mt-1 flex items-center gap-1 ${hasConflict ? 'text-rose-600' : 'text-slate-400'}`}>
+                               <Clock size={8} className="opacity-40" /> {session.startTime}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              ))}
+
+              <div className="absolute left-[110px] right-0 border-t-[3px] border-rose-500 z-40 pointer-events-none" style={{ top: `${(((currentTime.getHours() * 60 + currentTime.getMinutes()) - 420) / 630) * 100}%` }}>
+                 <div className="bg-rose-500 text-white text-[10px] font-black px-3 py-1.5 rounded-r-md shadow-2xl flex items-center gap-2 -mt-[18px] w-fit">
+                    <Clock size={14} /> {formattedTime}
+                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* BOTÓN AGREGAR */}
+      {activeInstId !== 'all' && institutions.length > 0 && (
+        <button onClick={() => setShowAddSession(true)} className="fixed bottom-10 right-10 bg-indigo-600 text-white p-7 rounded-[2.5rem] shadow-2xl hover:scale-110 active:scale-95 transition-all z-50">
+          <Plus size={36} />
+        </button>
+      )}
+
+      {/* MODAL AGREGAR SESIÓN */}
+      {showAddSession && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xl z-[60] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-[3rem] p-10 space-y-8 shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center border-b pb-6">
+              <h3 className="text-2xl font-black uppercase tracking-tighter">{editingSessionId ? 'Editar Clase' : 'Agendar Clase'}</h3>
+              <button onClick={resetForm} className="p-3 hover:bg-slate-100 rounded-full text-slate-400"><X size={28} /></button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><BookOpen size={16}/> Asignatura</label>
+                {!isManualSubject ? (
+                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold text-slate-800" value={form.subject} onChange={(e) => e.target.value === "MANUAL" ? setIsManualSubject(true) : setForm({...form, subject: e.target.value})}>
+                    <option value="">Seleccionar materia...</option>
+                    {Object.entries(SUBJECT_CATALOG).map(([cat, list]) => (
+                      <optgroup key={cat} label={cat}>{list.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
+                    ))}
+                    <option value="MANUAL" className="text-indigo-600 font-black">+ Materia manual</option>
+                  </select>
+                ) : (
+                  <div className="flex gap-3 animate-in slide-in-from-right-4">
+                    <input type="text" placeholder="Escribe la materia..." className="flex-1 p-5 bg-indigo-50 border-2 border-indigo-200 rounded-[1.5rem] font-bold" value={form.subject} onChange={(e) => setForm({...form, subject: e.target.value})} autoFocus />
+                    <button onClick={() => setIsManualSubject(false)} className="p-5 text-slate-400 font-bold">Volver</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Hash size={16}/> Grupo / Clase</label>
+                  <button onClick={() => setShowGroupCreator(!showGroupCreator)} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{showGroupCreator ? '× Cancelar' : '+ Nuevo Grupo'}</button>
+                </div>
+                {!showGroupCreator ? (
+                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold text-slate-800" value={form.groupId} onChange={(e) => setForm({...form, groupId: e.target.value})}>
+                    <option value="">Seleccionar grupo...</option>
+                    {groups.filter(g => g.instId === activeInstId).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                ) : (
+                  <div className="p-8 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] space-y-6 animate-in slide-in-from-top-4">
+                    {Object.entries(GROUP_PRESETS).map(([ciclo, presets]) => (
+                      <div key={ciclo} className="space-y-3">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{ciclo === 'EBI' ? 'E. Básica' : 'Bachillerato'}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {presets.map(p => (
+                            <div key={p.label} className="group relative">
+                              <button className="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[11px] font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 shadow-sm transition-all peer">
+                                {p.label} {p.suffix}
+                              </button>
+                              <div className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-auto">
+                                <select 
+                                  className="w-full h-full cursor-pointer"
+                                  onChange={(e) => addGroup(`${p.label} ${e.target.value} ${p.suffix}`)}
+                                  defaultValue=""
+                                >
+                                  <option value="" disabled>#</option>
+                                  {[1,2,3,4,5,6].map(n => <option key={n} value={n}>G{n}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Día</label>
+                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold text-slate-800" value={form.day} onChange={(e) => setForm({...form, day: e.target.value})}>
+                    {DAYS_ES.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Módulos</label>
+                  <div className="flex gap-2 items-center">
+                    <select className="flex-1 p-5 bg-indigo-50 border-2 border-indigo-100 text-indigo-700 rounded-[1.5rem] font-black" value={form.startModuleId} onChange={(e) => setForm({...form, startModuleId: parseInt(e.target.value), endModuleId: Math.max(form.endModuleId, parseInt(e.target.value))})}>
+                      {modulesList.map(m => <option key={m.id} value={m.id}>M{m.id}</option>)}
+                    </select>
+                    <span className="font-black text-slate-300">→</span>
+                    <select className="flex-1 p-5 bg-indigo-50 border-2 border-indigo-100 text-indigo-700 rounded-[1.5rem] font-black" value={form.endModuleId} onChange={(e) => setForm({...form, endModuleId: parseInt(e.target.value)})}>
+                      {modulesList.filter(m => m.id >= form.startModuleId).map(m => <option key={m.id} value={m.id}>M{m.id}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Palette size={16}/> Color</label>
+                <div className="flex gap-4 p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] justify-center">
+                  {SESSION_COLORS.map(c => (
+                    <button key={c.hex} onClick={() => setForm({...form, color: c.hex})} className={`w-12 h-12 rounded-full border-4 transition-all hover:scale-110 active:scale-95 shadow-lg ${form.color === c.hex ? 'border-white ring-4 ring-indigo-500 scale-110' : 'border-transparent opacity-40'}`} style={{ backgroundColor: c.hex }} />
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={saveSession} className="w-full p-7 bg-indigo-600 text-white rounded-[2rem] font-black text-lg uppercase tracking-widest shadow-2xl active:scale-95 transition-all">Confirmar Clase</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL AJUSTES */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-[3rem] p-10 space-y-8 shadow-2xl animate-in slide-in-from-bottom-8">
+            <div className="flex justify-between items-center border-b pb-6">
+              <h3 className="text-xl font-black uppercase tracking-tight">Ajustes: {activeInst?.name}</h3>
+              <button onClick={() => setShowSettings(false)} className="p-3 bg-slate-50 rounded-full text-slate-400"><X size={24}/></button>
+            </div>
+            
+            <div className="space-y-8 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="space-y-3">
+                <label className="text-xs font-black text-slate-400 uppercase flex items-center gap-2"><Palette size={16}/> Color Institucional</label>
+                <div className="grid grid-cols-5 gap-3 p-4 bg-slate-50 rounded-3xl">
+                  {INST_PALETTE.map(hex => (
+                    <button key={hex} onClick={() => updateInstConfig({ color: hex })} className={`w-10 h-10 rounded-full border-4 transition-all ${activeInst?.color === hex ? 'border-white ring-4 ring-indigo-500 scale-110 shadow-md' : 'border-transparent opacity-40'}`} style={{ backgroundColor: hex }} />
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-black text-slate-400 uppercase">Duración de Módulos (minutos)</label>
+                <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl">
+                  {[40, 45, 60].map(min => (
+                    <button key={min} onClick={() => updateInstConfig({ moduleDuration: min })} className={`flex-1 py-4 rounded-xl font-black text-xs transition-all ${activeInst?.moduleDuration === min ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
+                      {min} MIN
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest"><Coffee size={16}/> Recreos</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7].map(mod => {
+                    const br = activeInst?.breaks?.find(b => b.afterModule === mod);
+                    return (
+                      <div key={mod} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <span className="font-bold text-xs text-slate-500">Tras Módulo {mod}</span>
+                        <select 
+                          value={br?.minutes || 0}
+                          onChange={(e) => {
+                            const mins = parseInt(e.target.value);
+                            let newBreaks = (activeInst?.breaks || []).filter(b => b.afterModule !== mod);
+                            if (mins > 0) newBreaks.push({ afterModule: mod, minutes: mins });
+                            updateInstConfig({ breaks: newBreaks.sort((a,b) => a.afterModule - b.afterModule) });
+                          }}
+                          className="p-2 bg-white border border-slate-200 rounded-xl font-black text-indigo-600 outline-none"
+                        >
+                          <option value={0}>Sin recreo</option>
+                          {[5, 10, 15, 20, 30].map(m => <option key={m} value={m}>{m} min</option>)}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button onClick={() => {
+                if(confirm("¿Seguro que deseas eliminar este centro y todas sus clases?")) {
+                  setInstitutions(institutions.filter(i => i.id !== activeInstId));
+                  setSessions(sessions.filter(s => s.instId !== activeInstId));
+                  setActiveInstId('all');
+                  setShowSettings(false);
+                }
+              }} className="w-full py-5 text-rose-500 font-black text-xs uppercase tracking-[0.2em] border-2 border-rose-50 hover:bg-rose-50 rounded-[1.5rem] transition-all">Eliminar Institución</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL NUEVA INSTITUCIÓN */}
+      {showAddInstModal && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-sm:max-w-xs max-w-sm rounded-[3rem] p-12 space-y-8 shadow-2xl animate-in zoom-in-95">
+            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner"><School size={40} /></div>
+            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight text-center">Nuevo Centro Educativo</h3>
+            <div className="space-y-4">
+              <input type="text" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold text-center outline-none focus:border-indigo-500" placeholder="Ej: Liceo 1, Colegio..." value={tempInstName} onChange={(e) => setTempInstName(e.target.value)} autoFocus />
+              <button onClick={handleConfirmAddInstitution} className="w-full p-5 bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-xl">Crear Agenda</button>
+              <button onClick={() => setShowAddInstModal(false)} className="w-full text-xs font-black text-slate-300 uppercase tracking-widest text-center">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default App;
