@@ -1,607 +1,508 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Plus, 
-  Trash2, 
-  Calendar as CalendarIcon, 
-  Users, 
-  Clock, 
-  X,
-  BookOpen, 
-  Settings,
-  Check,
-  CalendarDays,
-  CalendarCheck,
-  School,
-  ChevronDown,
-  Coffee,
-  Pencil,
-  PlusCircle,
-  Building2,
-  LayoutGrid,
-  ChevronRight,
-  AlertTriangle,
-  Info,
-  MapPin,
-  Palette,
-  Beaker,
-  Hash,
-  Calendar as CalendarLucide
+  Mail, 
+  Lock, 
+  Search, 
+  Bell, 
+  Heart, 
+  Play, 
+  Pause, 
+  SkipBack, 
+  SkipForward, 
+  Repeat, 
+  Shuffle, 
+  MoreHorizontal, 
+  ChevronLeft,
+  Flame,
+  Music,
+  Headphones,
+  Loader2,
+  AlertCircle,
+  Disc,
+  ArrowRight,
+  Volume2,
+  VolumeX,
+  Volume1
 } from 'lucide-react';
 
-// --- CONFIGURACIÓN Y CONSTANTES ---
-const THEME = {
-  bgApp: '#f1f5f9',
-  surface: '#ffffff',
-  primary: '#4f46e5', 
-  primaryDark: '#0f172a', 
-  agendaGeneralBg: '#e2e8f0', // Gris claro solicitado
-  radius: 'rounded-[2.5rem]' 
-};
+// --- Assets ---
+const WELCOME_ILLUSTRATION = "https://img.freepik.com/premium-photo/3d-rendering-creative-concept-mobile-phone-with-headphones-listening-music-with-floating-musical-notes_651587-2591.jpg"; 
 
-const DAYS_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const HOURS = Array.from({ length: 11 }, (_, i) => i + 7); 
-
-const SESSION_COLORS = [
-  { id: 'indigo', hex: '#6366f1', label: 'Teórico' },
-  { id: 'emerald', hex: '#10b981', label: 'Práctico' },
-  { id: 'rose', hex: '#f43f5e', label: 'Examen' },
-  { id: 'amber', hex: '#f59e0b', label: 'Especial' },
-  { id: 'sky', hex: '#0ea5e9', label: 'Virtual' }
-];
-
-const INST_PALETTE = [
-  '#FFF59D', '#FFCC80', '#FF708D', '#6D4C8E', '#422F52',
-  '#2D1B33', '#5E445D', '#949B6A', '#CCE283', '#F9F5D7'
-];
-
-const SUBJECT_CATALOG = {
-  EBI: ["Matemática", "Lengua Española", "Ciencias Físicas", "Biología", "Geografía", "Historia", "Inglés", "Educación Física", "Informática"],
-  EMS: ["Matemática", "Literatura", "Filosofía", "Inglés", "Física", "Química", "Biología", "Historia", "Sociología", "Derecho", "STEM"],
-  PAI_IB: ["Lengua y Literatura (PAI)", "Adquisición de Lenguas (PAI)", "Individuos y Sociedades (PAI)", "Ciencias (PAI)", "Matemáticas (PAI)", "Artes (PAI)", "Diseño (PAI)"],
-  DIPLOMA_IB: ["TdC", "Monografía", "CAS", "Literatura NS/NM", "Inglés B NS/NM", "Gestión de Negocios", "Sistemas Ambientales", "Biología NS/NM", "Física NS/NM", "Matemáticas: Análisis"],
-  Talleres: ["Robótica", "Programación", "Teatro", "Danza", "Cocina", "Carpintería"]
-};
-
-const GROUP_PRESETS = {
-  EBI: [
-    { label: '7º', suffix: 'EBI', color: '#3b82f6' },
-    { label: '8º', suffix: 'EBI', color: '#6366f1' },
-    { label: '9º', suffix: 'EBI', color: '#8b5cf6' }
-  ],
-  EMS: [
-    { label: '1º', suffix: 'EMS', color: '#ec4899' },
-    { label: '2º', suffix: 'EMS', color: '#f43f5e' },
-    { label: '3º', suffix: 'EMS', color: '#8b5cf6' }
+// --- Álbum: Coldplay Experience ---
+// Fuentes de audio actualizadas a CDNs de alta disponibilidad (Spotify/Deezer Previews)
+// Estos enlaces son compatibles con navegadores modernos y evitan errores de "source not supported"
+const COLDPLAY_ALBUM = {
+  id: 'coldplay-mots',
+  title: 'Music of the Spheres & Hits',
+  artist: 'Coldplay',
+  cover: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80',
+  year: '2021',
+  tracks: [
+    { 
+      id: 1, 
+      title: 'Higher Power', 
+      duration: '4:29', 
+      audioUrl: 'https://p.scdn.co/mp3-preview/88a2f3a699c264f33d9a1f103507d4715f340f6c',
+    },
+    { 
+      id: 2, 
+      title: 'Every Teardrop is a Waterfall', 
+      duration: '4:02', 
+      audioUrl: 'https://p.scdn.co/mp3-preview/a11b6215357361732958432f8386157e',
+    },
+    { 
+      id: 3, 
+      title: 'My Universe', 
+      duration: '3:48', 
+      audioUrl: 'https://p.scdn.co/mp3-preview/335d2630f5763b0a39a2b724f8d2983b6329432e',
+      featured: 'BTS' 
+    },
+    { 
+      id: 4, 
+      title: 'Let Somebody Go', 
+      duration: '4:01', 
+      audioUrl: 'https://p.scdn.co/mp3-preview/45686016a297921a8d56b00913988f5f4b00570b',
+      featured: 'Selena Gomez' 
+    },
+    { 
+      id: 5, 
+      title: 'Humankind', 
+      duration: '4:26', 
+      audioUrl: 'https://p.scdn.co/mp3-preview/a917300f86644265452d9213504112e54f73867d',
+    },
   ]
 };
 
-const App = () => {
-  const [institutions, setInstitutions] = useState([]);
-  const [activeInstId, setActiveInstId] = useState('all'); 
-  const [sessions, setSessions] = useState([]);
-  const [groups, setGroups] = useState([]);
+// --- Componentes Globales ---
 
-  const [showAddSession, setShowAddSession] = useState(false);
-  const [showAddInstModal, setShowAddInstModal] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [editingSessionId, setEditingSessionId] = useState(null);
-  const [tempInstName, setTempInstName] = useState("");
-  const [isManualSubject, setIsManualSubject] = useState(false);
-  const [showGroupCreator, setShowGroupCreator] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
+const StarBackground = () => (
+  <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 bg-gradient-to-br from-[#1a0b2e] via-[#4a1d6e] to-[#8e2de2]"></div>
+    {[...Array(60)].map((_, i) => (
+      <div 
+        key={i}
+        className="absolute rounded-full bg-white opacity-20 animate-pulse"
+        style={{
+          width: Math.random() * 3 + 'px',
+          height: Math.random() * 3 + 'px',
+          top: Math.random() * 100 + '%',
+          left: Math.random() * 100 + '%',
+          animationDelay: Math.random() * 5 + 's'
+        }}
+      />
+    ))}
+  </div>
+);
 
-  const activeInst = institutions.find(i => i.id === activeInstId) || null;
+const GlassCard = ({ children, className = "" }) => (
+  <div className={`bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl ${className}`}>
+    {children}
+  </div>
+);
 
-  const [form, setForm] = useState({
-    subject: '',
-    groupId: '',
-    day: 'Lunes',
-    startModuleId: 1,
-    endModuleId: 1,
-    color: SESSION_COLORS[0].hex
-  });
+// --- Pantallas ---
 
-  // Formateador de fecha para la cabecera
-  const formattedDate = useMemo(() => {
-    return new Intl.DateTimeFormat('es-ES', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long' 
-    }).format(currentTime);
-  }, [currentTime]);
-
-  const formattedTime = useMemo(() => {
-    return currentTime.toLocaleTimeString('es-ES', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
-  }, [currentTime]);
-
-  useEffect(() => {
-    const savedInst = localStorage.getItem('inst_perfiles_v17');
-    const savedSessions = localStorage.getItem('inst_sesiones_v17');
-    const savedGroups = localStorage.getItem('inst_grupos_v17');
-    if (savedInst) setInstitutions(JSON.parse(savedInst));
-    if (savedSessions) setSessions(JSON.parse(savedSessions));
-    if (savedGroups) setGroups(JSON.parse(savedGroups));
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('inst_perfiles_v17', JSON.stringify(institutions));
-    localStorage.setItem('inst_sesiones_v17', JSON.stringify(sessions));
-    localStorage.setItem('inst_grupos_v17', JSON.stringify(groups));
-  }, [institutions, sessions, groups]);
-
-  const timeToMin = (t) => {
-    if (!t) return 0;
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  };
-
-  const modulesList = useMemo(() => {
-    const modules = [];
-    const instRef = activeInst || (institutions.length > 0 ? institutions[0] : { moduleDuration: 45, breaks: [] });
-    let currentStart = 7 * 60 + 45; 
-    
-    for (let i = 1; i <= 13; i++) {
-      const format = (h, m) => `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-      const startStr = format(Math.floor(currentStart / 60), currentStart % 60);
-      const endStr = format(Math.floor((currentStart + (instRef.moduleDuration || 45)) / 60), (currentStart + (instRef.moduleDuration || 45)) % 60);
-      
-      modules.push({ id: i, label: `M${i}`, start: startStr, end: endStr });
-
-      currentStart += (instRef.moduleDuration || 45);
-      const breakFound = instRef.breaks?.find(b => b.afterModule === i);
-      if (breakFound) currentStart += breakFound.minutes;
-    }
-    return modules;
-  }, [activeInst, institutions]);
-
-  const conflicts = useMemo(() => {
-    const conflictIds = new Set();
-    sessions.forEach((s1, i) => {
-      sessions.slice(i + 1).forEach(s2 => {
-        if (s1.day === s2.day) {
-          const start1 = timeToMin(s1.startTime);
-          const end1 = timeToMin(s1.endTime);
-          const start2 = timeToMin(s2.startTime);
-          const end2 = timeToMin(s2.endTime);
-          if (start1 < end2 && end1 > start2) {
-            conflictIds.add(s1.id);
-            conflictIds.add(s2.id);
-          }
-        }
-      });
-    });
-    return conflictIds;
-  }, [sessions]);
-
-  const handleConfirmAddInstitution = () => {
-    if (!tempInstName.trim()) return;
-    const newInst = { id: Date.now().toString(), name: tempInstName, moduleDuration: 45, breaks: [], color: INST_PALETTE[institutions.length % INST_PALETTE.length] };
-    setInstitutions([...institutions, newInst]);
-    setActiveInstId(newInst.id);
-    setTempInstName("");
-    setShowAddInstModal(false);
-  };
-
-  const addGroup = (name) => {
-    if (!name || activeInstId === 'all') return;
-    const group = { id: Date.now().toString(), name, instId: activeInstId };
-    setGroups([...groups, group]);
-    setForm({ ...form, groupId: group.id });
-    setShowGroupCreator(false);
-  };
-
-  const updateInstConfig = (updates) => {
-    if (!activeInstId || activeInstId === 'all') return;
-    setInstitutions(institutions.map(inst => inst.id === activeInstId ? { ...inst, ...updates } : inst));
-  };
-
-  const saveSession = () => {
-    if (!form.groupId || !form.subject || activeInstId === 'all') return;
-    const startM = modulesList.find(m => m.id === form.startModuleId);
-    const endM = modulesList.find(m => m.id === form.endModuleId);
-
-    const sessionData = { 
-      ...form, 
-      instId: activeInstId,
-      startTime: startM.start, 
-      endTime: endM.end,
-      isSingleModule: form.startModuleId === form.endModuleId
-    };
-
-    if (editingSessionId) {
-      setSessions(sessions.map(s => s.id === editingSessionId ? { ...sessionData, id: editingSessionId } : s));
-    } else {
-      setSessions([...sessions, { ...sessionData, id: Date.now().toString() }]);
-    }
-    resetForm();
-  };
-
-  const openEditModal = (session) => {
-    const allSubjects = Object.values(SUBJECT_CATALOG).flat();
-    setForm(session);
-    setIsManualSubject(!allSubjects.includes(session.subject));
-    setEditingSessionId(session.id);
-    setShowAddSession(true);
-  };
-
-  const resetForm = () => {
-    setForm({ subject: '', groupId: '', day: 'Lunes', startModuleId: 1, endModuleId: 1, color: SESSION_COLORS[0].hex });
-    setEditingSessionId(null);
-    setIsManualSubject(false);
-    setShowAddSession(false);
-  };
-
-  const getPosition = (start, end) => {
-    const s = timeToMin(start); const e = timeToMin(end);
-    const calendarBase = 7 * 60; const totalMinutesVisible = 10.5 * 60; 
-    return { top: `${((s - calendarBase) / totalMinutesVisible) * 100}%`, height: `${((e - s) / totalMinutesVisible) * 100}%` };
-  };
-
+const WelcomeScreen = ({ onStart, onLogin }) => {
   return (
-    <div style={{ backgroundColor: THEME.bgApp }} className="min-h-screen flex flex-col h-screen overflow-hidden antialiased text-slate-900">
-      
-      {/* HEADER ACTUALIZADO CON FECHA Y HORA */}
-      <header className="bg-white border-b border-slate-200 shrink-0 z-30 shadow-sm">
-        <div className="px-8 py-5 flex justify-between items-center">
-          <div className="flex items-center gap-5">
-            <div className="bg-indigo-600 p-3 rounded-[1.2rem] text-white shadow-xl shadow-indigo-100 flex-shrink-0">
-              <CalendarIcon size={24} />
-            </div>
-            <div>
-              <h1 className="font-black text-xl uppercase tracking-tighter leading-none mb-1">Agenda Docente</h1>
-              {/* WIDGET DE FECHA Y HORA PREMIUM */}
-              <div className="flex items-center gap-3 text-slate-400">
-                <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-inner">
-                  <CalendarLucide size={12} className="text-indigo-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{formattedDate}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-inner">
-                  <Clock size={12} className="text-indigo-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{formattedTime}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowAddInstModal(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-full font-black text-xs transition-all uppercase tracking-widest">
-              <PlusCircle size={18} /> Nuevo Centro
-            </button>
-            {activeInstId !== 'all' && institutions.length > 0 && (
-              <button onClick={() => setShowSettings(true)} className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-2xl border border-slate-100 transition-all">
-                <Settings size={22} />
-              </button>
-            )}
-          </div>
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-8 text-white font-sans overflow-hidden text-center">
+      <StarBackground />
+      <div className="relative z-10 w-full max-w-sm flex flex-col items-center animate-in fade-in zoom-in duration-1000">
+        <div className="relative w-full aspect-square flex items-center justify-center mb-10 overflow-visible">
+          <div className="absolute w-64 h-64 bg-pink-500/20 blur-3xl rounded-full animate-pulse"></div>
+          <img src={WELCOME_ILLUSTRATION} alt="SounDANI" className="relative z-20 w-full h-full object-contain drop-shadow-2xl" />
         </div>
-
-        <div className="px-8 pb-5 overflow-x-auto flex items-center gap-3 no-scrollbar">
-          <button onClick={() => setActiveInstId('all')} className={`flex items-center gap-2 px-8 py-3.5 rounded-full font-black text-xs uppercase transition-all shadow-sm ${activeInstId === 'all' ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-white text-slate-400 border border-slate-100 hover:border-slate-300'}`}>
-            <LayoutGrid size={16} /> Agenda General
-          </button>
-          <div className="h-6 w-[2px] bg-slate-100 mx-2"></div>
-          {institutions.map(inst => (
-            <button key={inst.id} onClick={() => setActiveInstId(inst.id)} className={`flex items-center gap-2 px-8 py-3.5 rounded-full font-black text-xs uppercase transition-all shadow-sm ${activeInstId === inst.id ? 'bg-white ring-2 ring-indigo-600 text-indigo-600 shadow-xl' : 'bg-white text-slate-400 border border-slate-100'}`}>
-              <div className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: inst.color }}></div>
-              {inst.name}
-            </button>
-          ))}
+        <div className="space-y-3 mb-12">
+          <h1 className="text-6xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 uppercase">SounDANI</h1>
+          <p className="text-white/60 text-lg font-medium">Tu galaxia musical en un clic</p>
         </div>
-      </header>
-
-      {/* ÁREA DE CONTENIDO */}
-      <main className="flex-1 overflow-auto p-6 md:p-8 flex flex-col">
-        {institutions.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in-95">
-             <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-xl border border-indigo-100">
-               <School size={48} />
-             </div>
-             <h2 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tighter">Agenda Vacía</h2>
-             <p className="text-slate-500 text-sm max-w-xs font-bold leading-relaxed mb-8">Comienza añadiendo tu primer centro educativo para organizar tus clases.</p>
-             <button onClick={() => setShowAddInstModal(true)} className="px-10 py-5 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-2xl">Crear Primer Centro</button>
-          </div>
-        ) : (
-          <div className={`${THEME.radius} bg-white shadow-2xl border border-slate-200 flex flex-col h-[950px] min-w-[1100px] overflow-hidden`}>
-            
-            <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] bg-slate-50 border-b border-slate-200 sticky top-0 z-20">
-              <div className="p-6 border-r border-slate-200"></div>
-              {DAYS_ES.map(day => (
-                <div key={day} className="p-6 text-center border-r border-slate-200 last:border-0 font-black text-sm text-slate-800 uppercase tracking-widest">{day}</div>
-              ))}
-            </div>
-
-            <div className="relative grid grid-cols-[110px_1fr_1fr_1fr_1fr_1fr_1fr] flex-1">
-              <div className="bg-slate-50/50 border-r border-slate-200 font-black text-xs text-slate-800">
-                {HOURS.map(h => (
-                  <div key={h} className="h-[9.09%] border-b border-slate-200 flex items-center justify-center bg-white/40">
-                    {h}:00
-                  </div>
-                ))}
-              </div>
-
-              {DAYS_ES.map(day => (
-                <div key={day} className="relative border-r border-slate-100 last:border-0 bg-white">
-                  {sessions
-                    .filter(s => s.day === day && (activeInstId === 'all' || s.instId === activeInstId))
-                    .map(session => {
-                      const pos = getPosition(session.startTime, session.endTime);
-                      const inst = institutions.find(i => i.id === session.instId);
-                      const isGeneral = activeInstId === 'all';
-                      const group = groups.find(g => g.id === session.groupId);
-                      const isCompact = session.isSingleModule;
-                      const hasConflict = conflicts.has(session.id);
-                      
-                      return (
-                        <div 
-                          key={session.id}
-                          className={`group absolute left-1 right-1 rounded-md border-l-[12px] shadow-sm transition-all hover:shadow-2xl hover:z-30 flex flex-col overflow-hidden 
-                            ${isCompact ? 'p-2 justify-center' : 'p-3 md:p-4 justify-between'}
-                            ${hasConflict ? 'ring-4 ring-rose-500 ring-inset animate-pulse bg-rose-50 border-rose-600' : ''}`}
-                          style={{ 
-                            ...pos, 
-                            backgroundColor: hasConflict ? '#fee2e2' : (isGeneral ? THEME.agendaGeneralBg : `${session.color}15`),
-                            borderColor: hasConflict ? '#e11d48' : (inst?.color || THEME.primary)
-                          }}
-                        >
-                          <div className="absolute top-1 right-1 flex opacity-0 group-hover:opacity-100 transition-opacity z-10 gap-0.5">
-                             <button onClick={() => openEditModal(session)} className="p-1.5 bg-white/90 rounded-md text-indigo-600 shadow-sm hover:bg-white"><Pencil size={12}/></button>
-                             <button onClick={() => setSessions(sessions.filter(s => s.id !== session.id))} className="p-1.5 bg-white/90 rounded-md text-rose-500 shadow-sm hover:bg-white"><Trash2 size={12}/></button>
-                          </div>
-
-                          <div className="flex flex-col min-h-0">
-                            <div className="flex items-center gap-1.5">
-                              {hasConflict && <AlertTriangle size={14} className="text-rose-600 shrink-0" />}
-                              <h4 
-                                className={`font-black uppercase leading-tight truncate ${hasConflict ? 'text-rose-900' : 'text-slate-900'} ${isCompact ? 'text-[11px] md:text-xs' : 'text-xs md:text-sm mb-1'}`}
-                                title={session.subject}
-                              >
-                                {session.subject}
-                              </h4>
-                            </div>
-                            <div className={`flex items-center gap-1 font-bold truncate ${isCompact ? 'text-[9px] md:text-[10px]' : 'text-[10px] md:text-xs'} ${hasConflict ? 'text-rose-700' : 'text-slate-600'}`}>
-                              <Users size={isCompact ? 10 : 12} className="shrink-0 opacity-60" />
-                              <span className="truncate">{group?.name || 'S/G'}</span>
-                            </div>
-                          </div>
-
-                          {!isCompact && (
-                            <div className="flex flex-col gap-1 mt-1 pt-1 border-t border-black/5 overflow-hidden">
-                              {isGeneral && (
-                                <div className="flex items-center gap-1 overflow-hidden" style={{ color: hasConflict ? '#e11d48' : (inst?.color) }}>
-                                  <Building2 size={10} className="shrink-0" />
-                                  <span className="text-[9px] font-black uppercase truncate">{inst?.name}</span>
-                                </div>
-                              )}
-                              <div className={`flex items-center gap-1 font-bold text-[9px] md:text-[10px] ${hasConflict ? 'text-rose-600' : 'text-slate-400'}`}>
-                                <Clock size={10} className="shrink-0 opacity-60" /> 
-                                <span className="truncate">{session.startTime}—{session.endTime}</span>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {isCompact && (
-                            <div className={`text-[8px] md:text-[9px] font-black mt-1 flex items-center gap-1 ${hasConflict ? 'text-rose-600' : 'text-slate-400'}`}>
-                               <Clock size={8} className="opacity-40" /> {session.startTime}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              ))}
-
-              <div className="absolute left-[110px] right-0 border-t-[3px] border-rose-500 z-40 pointer-events-none" style={{ top: `${(((currentTime.getHours() * 60 + currentTime.getMinutes()) - 420) / 630) * 100}%` }}>
-                 <div className="bg-rose-500 text-white text-[10px] font-black px-3 py-1.5 rounded-r-md shadow-2xl flex items-center gap-2 -mt-[18px] w-fit">
-                    <Clock size={14} /> {formattedTime}
-                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* BOTÓN AGREGAR */}
-      {activeInstId !== 'all' && institutions.length > 0 && (
-        <button onClick={() => setShowAddSession(true)} className="fixed bottom-10 right-10 bg-indigo-600 text-white p-7 rounded-[2.5rem] shadow-2xl hover:scale-110 active:scale-95 transition-all z-50">
-          <Plus size={36} />
-        </button>
-      )}
-
-      {/* MODAL AGREGAR SESIÓN */}
-      {showAddSession && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xl z-[60] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] p-10 space-y-8 shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-center border-b pb-6">
-              <h3 className="text-2xl font-black uppercase tracking-tighter">{editingSessionId ? 'Editar Clase' : 'Agendar Clase'}</h3>
-              <button onClick={resetForm} className="p-3 hover:bg-slate-100 rounded-full text-slate-400"><X size={28} /></button>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><BookOpen size={16}/> Asignatura</label>
-                {!isManualSubject ? (
-                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold text-slate-800" value={form.subject} onChange={(e) => e.target.value === "MANUAL" ? setIsManualSubject(true) : setForm({...form, subject: e.target.value})}>
-                    <option value="">Seleccionar materia...</option>
-                    {Object.entries(SUBJECT_CATALOG).map(([cat, list]) => (
-                      <optgroup key={cat} label={cat}>{list.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
-                    ))}
-                    <option value="MANUAL" className="text-indigo-600 font-black">+ Materia manual</option>
-                  </select>
-                ) : (
-                  <div className="flex gap-3 animate-in slide-in-from-right-4">
-                    <input type="text" placeholder="Escribe la materia..." className="flex-1 p-5 bg-indigo-50 border-2 border-indigo-200 rounded-[1.5rem] font-bold" value={form.subject} onChange={(e) => setForm({...form, subject: e.target.value})} autoFocus />
-                    <button onClick={() => setIsManualSubject(false)} className="p-5 text-slate-400 font-bold">Volver</button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Hash size={16}/> Grupo / Clase</label>
-                  <button onClick={() => setShowGroupCreator(!showGroupCreator)} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{showGroupCreator ? '× Cancelar' : '+ Nuevo Grupo'}</button>
-                </div>
-                {!showGroupCreator ? (
-                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold text-slate-800" value={form.groupId} onChange={(e) => setForm({...form, groupId: e.target.value})}>
-                    <option value="">Seleccionar grupo...</option>
-                    {groups.filter(g => g.instId === activeInstId).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                ) : (
-                  <div className="p-8 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] space-y-6 animate-in slide-in-from-top-4">
-                    {Object.entries(GROUP_PRESETS).map(([ciclo, presets]) => (
-                      <div key={ciclo} className="space-y-3">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{ciclo === 'EBI' ? 'E. Básica' : 'Bachillerato'}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {presets.map(p => (
-                            <div key={p.label} className="group relative">
-                              <button className="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[11px] font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 shadow-sm transition-all peer">
-                                {p.label} {p.suffix}
-                              </button>
-                              <div className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-auto">
-                                <select 
-                                  className="w-full h-full cursor-pointer"
-                                  onChange={(e) => addGroup(`${p.label} ${e.target.value} ${p.suffix}`)}
-                                  defaultValue=""
-                                >
-                                  <option value="" disabled>#</option>
-                                  {[1,2,3,4,5,6].map(n => <option key={n} value={n}>G{n}</option>)}
-                                </select>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Día</label>
-                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold text-slate-800" value={form.day} onChange={(e) => setForm({...form, day: e.target.value})}>
-                    {DAYS_ES.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Módulos</label>
-                  <div className="flex gap-2 items-center">
-                    <select className="flex-1 p-5 bg-indigo-50 border-2 border-indigo-100 text-indigo-700 rounded-[1.5rem] font-black" value={form.startModuleId} onChange={(e) => setForm({...form, startModuleId: parseInt(e.target.value), endModuleId: Math.max(form.endModuleId, parseInt(e.target.value))})}>
-                      {modulesList.map(m => <option key={m.id} value={m.id}>M{m.id}</option>)}
-                    </select>
-                    <span className="font-black text-slate-300">→</span>
-                    <select className="flex-1 p-5 bg-indigo-50 border-2 border-indigo-100 text-indigo-700 rounded-[1.5rem] font-black" value={form.endModuleId} onChange={(e) => setForm({...form, endModuleId: parseInt(e.target.value)})}>
-                      {modulesList.filter(m => m.id >= form.startModuleId).map(m => <option key={m.id} value={m.id}>M{m.id}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Palette size={16}/> Color</label>
-                <div className="flex gap-4 p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] justify-center">
-                  {SESSION_COLORS.map(c => (
-                    <button key={c.hex} onClick={() => setForm({...form, color: c.hex})} className={`w-12 h-12 rounded-full border-4 transition-all hover:scale-110 active:scale-95 shadow-lg ${form.color === c.hex ? 'border-white ring-4 ring-indigo-500 scale-110' : 'border-transparent opacity-40'}`} style={{ backgroundColor: c.hex }} />
-                  ))}
-                </div>
-              </div>
-
-              <button onClick={saveSession} className="w-full p-7 bg-indigo-600 text-white rounded-[2rem] font-black text-lg uppercase tracking-widest shadow-2xl active:scale-95 transition-all">Confirmar Clase</button>
-            </div>
-          </div>
+        <div className="w-full space-y-4">
+          <button onClick={onStart} className="w-full bg-gradient-to-r from-pink-500 to-rose-600 py-5 rounded-[2.5rem] font-bold text-xl shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">Comenzar <ArrowRight size={20} /></button>
+          <button onClick={onLogin} className="w-full bg-white/5 border border-white/10 text-white py-5 rounded-[2.5rem] font-bold text-xl hover:bg-white/10 active:scale-95 transition-all">Log In</button>
         </div>
-      )}
-
-      {/* MODAL AJUSTES */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[70] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-[3rem] p-10 space-y-8 shadow-2xl animate-in slide-in-from-bottom-8">
-            <div className="flex justify-between items-center border-b pb-6">
-              <h3 className="text-xl font-black uppercase tracking-tight">Ajustes: {activeInst?.name}</h3>
-              <button onClick={() => setShowSettings(false)} className="p-3 bg-slate-50 rounded-full text-slate-400"><X size={24}/></button>
-            </div>
-            
-            <div className="space-y-8 max-h-[60vh] overflow-y-auto pr-2">
-              <div className="space-y-3">
-                <label className="text-xs font-black text-slate-400 uppercase flex items-center gap-2"><Palette size={16}/> Color Institucional</label>
-                <div className="grid grid-cols-5 gap-3 p-4 bg-slate-50 rounded-3xl">
-                  {INST_PALETTE.map(hex => (
-                    <button key={hex} onClick={() => updateInstConfig({ color: hex })} className={`w-10 h-10 rounded-full border-4 transition-all ${activeInst?.color === hex ? 'border-white ring-4 ring-indigo-500 scale-110 shadow-md' : 'border-transparent opacity-40'}`} style={{ backgroundColor: hex }} />
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-xs font-black text-slate-400 uppercase">Duración de Módulos (minutos)</label>
-                <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl">
-                  {[40, 45, 60].map(min => (
-                    <button key={min} onClick={() => updateInstConfig({ moduleDuration: min })} className={`flex-1 py-4 rounded-xl font-black text-xs transition-all ${activeInst?.moduleDuration === min ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
-                      {min} MIN
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-xs font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest"><Coffee size={16}/> Recreos</label>
-                <div className="grid grid-cols-1 gap-2">
-                  {[1, 2, 3, 4, 5, 6, 7].map(mod => {
-                    const br = activeInst?.breaks?.find(b => b.afterModule === mod);
-                    return (
-                      <div key={mod} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <span className="font-bold text-xs text-slate-500">Tras Módulo {mod}</span>
-                        <select 
-                          value={br?.minutes || 0}
-                          onChange={(e) => {
-                            const mins = parseInt(e.target.value);
-                            let newBreaks = (activeInst?.breaks || []).filter(b => b.afterModule !== mod);
-                            if (mins > 0) newBreaks.push({ afterModule: mod, minutes: mins });
-                            updateInstConfig({ breaks: newBreaks.sort((a,b) => a.afterModule - b.afterModule) });
-                          }}
-                          className="p-2 bg-white border border-slate-200 rounded-xl font-black text-indigo-600 outline-none"
-                        >
-                          <option value={0}>Sin recreo</option>
-                          {[5, 10, 15, 20, 30].map(m => <option key={m} value={m}>{m} min</option>)}
-                        </select>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <button onClick={() => {
-                if(confirm("¿Seguro que deseas eliminar este centro y todas sus clases?")) {
-                  setInstitutions(institutions.filter(i => i.id !== activeInstId));
-                  setSessions(sessions.filter(s => s.instId !== activeInstId));
-                  setActiveInstId('all');
-                  setShowSettings(false);
-                }
-              }} className="w-full py-5 text-rose-500 font-black text-xs uppercase tracking-[0.2em] border-2 border-rose-50 hover:bg-rose-50 rounded-[1.5rem] transition-all">Eliminar Institución</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL NUEVA INSTITUCIÓN */}
-      {showAddInstModal && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-sm:max-w-xs max-w-sm rounded-[3rem] p-12 space-y-8 shadow-2xl animate-in zoom-in-95">
-            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner"><School size={40} /></div>
-            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight text-center">Nuevo Centro Educativo</h3>
-            <div className="space-y-4">
-              <input type="text" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold text-center outline-none focus:border-indigo-500" placeholder="Ej: Liceo 1, Colegio..." value={tempInstName} onChange={(e) => setTempInstName(e.target.value)} autoFocus />
-              <button onClick={handleConfirmAddInstitution} className="w-full p-5 bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-xl">Crear Agenda</button>
-              <button onClick={() => setShowAddInstModal(false)} className="w-full text-xs font-black text-slate-300 uppercase tracking-widest text-center">Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
 
-export default App;
+const LoginScreen = ({ onLogin, onBack }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!email || !password) return;
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      onLogin({ name: email.split('@')[0] });
+    }, 1200);
+  };
+
+  return (
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-6 text-white font-sans">
+      <StarBackground />
+      <div className="relative z-10 w-full max-w-sm flex flex-col items-center animate-in fade-in slide-in-from-bottom-10 duration-700">
+        <button onClick={onBack} className="absolute -top-12 left-0 p-2 hover:bg-white/10 rounded-full transition-colors">
+          <ChevronLeft size={28} />
+        </button>
+
+        <h1 className="text-4xl font-bold mb-2 tracking-tight">SounDANI</h1>
+        <p className="text-white/60 mb-10 text-center px-4">Inicia sesión para escuchar a Coldplay.</p>
+
+        <form onSubmit={handleSubmit} className="w-full space-y-4 mb-6">
+          <div className="relative group">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-pink-400 transition-colors" size={20} />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all placeholder:text-white/20" />
+          </div>
+          <div className="relative group">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-pink-400 transition-colors" size={20} />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all placeholder:text-white/20" />
+          </div>
+          <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-pink-500 to-rose-600 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-pink-500/20 active:scale-95 transition-all">
+            {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Entrar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const AlbumScreen = ({ album, onBack, onPlayTrack, currentTrack, isPlaying }) => {
+  return (
+    <div className="relative min-h-screen pb-40 text-white p-6 animate-in slide-in-from-right duration-500">
+      <button onClick={onBack} className="mb-6 p-2 bg-white/10 rounded-full hover:bg-white/20 transition-all"><ChevronLeft size={24} /></button>
+      
+      <div className="flex flex-col items-center mb-10 text-center">
+        <div className="w-64 h-64 rounded-[2.5rem] overflow-hidden shadow-2xl mb-6 border border-white/10 relative group">
+          <img src={album.cover} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+        </div>
+        <h2 className="text-3xl font-black mb-1">{album.title}</h2>
+        <p className="text-pink-400 font-bold text-lg uppercase tracking-wider">{album.artist}</p>
+        
+        <div className="flex gap-4 mt-8">
+           <button 
+             onClick={() => onPlayTrack(album.tracks[0])} 
+             className="px-14 py-4 bg-white text-black rounded-[2rem] font-black shadow-xl hover:bg-pink-100 transition-all flex items-center gap-2 active:scale-95"
+           >
+             <Play fill="black" size={20} /> REPRODUCIR
+           </button>
+           <button className="p-4 bg-white/10 rounded-[2rem] border border-white/20 hover:bg-white/20 transition-all active:scale-95">
+             <Heart size={24} />
+           </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] px-2">Temas Destacados</h3>
+        {album.tracks.map((track, i) => (
+          <div 
+            key={track.id} 
+            onClick={() => onPlayTrack(track)} 
+            className={`flex items-center gap-4 p-4 rounded-3xl transition-all cursor-pointer group ${currentTrack?.id === track.id ? 'bg-pink-500/20 border border-pink-500/30' : 'hover:bg-white/5 border border-transparent'}`}
+          >
+            <div className="w-8 flex justify-center">
+              {currentTrack?.id === track.id && isPlaying ? (
+                <div className="flex items-end gap-0.5 h-4">
+                  <div className="w-1 bg-pink-500 animate-[music-bar_1s_ease-in-out_infinite] h-full"></div>
+                  <div className="w-1 bg-pink-500 animate-[music-bar_1s_ease-in-out_infinite_0.2s] h-2/3"></div>
+                  <div className="w-1 bg-pink-500 animate-[music-bar_1s_ease-in-out_infinite_0.4s] h-1/2"></div>
+                </div>
+              ) : (
+                <span className="text-white/20 text-sm font-bold group-hover:text-white/60">{i + 1}</span>
+              )}
+            </div>
+            <div className="flex-1">
+              <h4 className={`font-bold ${currentTrack?.id === track.id ? 'text-pink-400' : 'text-white'}`}>
+                {track.title} 
+                {track.featured && <span className="text-white/30 font-normal ml-2 text-xs">ft. {track.featured}</span>}
+              </h4>
+              <p className="text-[10px] text-white/20 uppercase tracking-widest">{album.artist}</p>
+            </div>
+            <span className="text-xs text-white/20 group-hover:text-white/60">{track.duration}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const HomeScreen = ({ user, onOpenAlbum, currentTrack, isPlaying, onTogglePlay }) => {
+  return (
+    <div className="relative min-h-screen pb-40 text-white p-6 space-y-8 max-md mx-auto animate-in fade-in duration-700">
+      <div className="flex justify-between items-center mt-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl border-2 border-pink-500/30 p-1 bg-gradient-to-br from-pink-500/20 to-purple-500/20">
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Dani'}`} className="w-full h-full rounded-xl" alt="Profile" />
+          </div>
+          <div>
+            <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-bold">SounDANI</p>
+            <h2 className="text-xl font-black">{user?.name || 'Dani'}</h2>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button className="w-10 h-10 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all"><Search size={20} /></button>
+          <button className="w-10 h-10 bg-white/5 rounded-2xl flex items-center justify-center relative hover:bg-white/10 transition-colors">
+            <Bell size={20} />
+            <div className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full border border-[#1a0b2e]"></div>
+          </button>
+        </div>
+      </div>
+
+      <section>
+        <p className="text-[10px] font-black text-white/30 uppercase tracking-widest px-2 mb-4">Reproduciendo Ahora</p>
+        <GlassCard className="p-6 bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-pink-900/20 border-white/5 relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-32 h-32 bg-pink-500/10 blur-3xl rounded-full"></div>
+          <div className="flex gap-6 items-center relative z-10">
+            <div className={`w-28 h-28 rounded-3xl overflow-hidden shadow-2xl ${isPlaying ? 'animate-spin-slow' : ''}`}>
+              <img src={currentTrack?.cover || COLDPLAY_ALBUM.cover} className="w-full h-full object-cover" alt="" />
+            </div>
+            <div className="flex-1 min-w-0">
+               <h3 className="font-black text-xl mb-1 truncate">{currentTrack?.title || "SounDANI Music"}</h3>
+               <p className="text-xs text-pink-400 font-bold mb-6">{currentTrack?.artist || "Disfruta el momento"}</p>
+               <div className="flex items-center justify-between px-2">
+                  <SkipBack size={24} className="text-white/40 hover:text-white cursor-pointer active:scale-90 transition-all" fill="currentColor" />
+                  <button onClick={onTogglePlay} className="w-14 h-14 rounded-[1.5rem] bg-white text-black flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                    {isPlaying ? <Pause fill="black" size={24} /> : <Play fill="black" size={24} className="ml-1" />}
+                  </button>
+                  <SkipForward size={24} className="text-white/40 hover:text-white cursor-pointer active:scale-90 transition-all" fill="currentColor" />
+               </div>
+            </div>
+          </div>
+        </GlassCard>
+      </section>
+
+      <section>
+        <h3 className="text-xl font-black mb-4 px-2 tracking-tight">Álbum Sugerido</h3>
+        <div className="flex gap-6 overflow-x-auto pb-6 no-scrollbar">
+          <div onClick={() => onOpenAlbum(COLDPLAY_ALBUM)} className="flex-shrink-0 w-48 group cursor-pointer">
+            <div className="w-48 h-48 rounded-[3rem] overflow-hidden mb-4 relative shadow-2xl transition-all group-hover:shadow-pink-500/10 border border-white/5">
+              <img src={COLDPLAY_ALBUM.cover} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="absolute bottom-6 right-6 w-12 h-12 bg-pink-500 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all shadow-xl"><Play fill="white" size={20} className="ml-1" /></div>
+            </div>
+            <h4 className="font-black text-md truncate px-2">{COLDPLAY_ALBUM.title}</h4>
+            <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] px-2 font-bold">{COLDPLAY_ALBUM.artist}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// --- App Principal ---
+
+export default function App() {
+  const [view, setView] = useState('welcome'); 
+  const [user, setUser] = useState(null);
+  const [selectedAlbum, setSelectedAlbum] = useState(null);
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [volume, setVolume] = useState(1); 
+  const [playerStatus, setPlayerStatus] = useState("SounDANI Online");
+  
+  const audioRef = useRef(null);
+
+  // Inicialización de eventos y estado del reproductor
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration > 0) {
+        setAudioProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    const handleEnded = () => setIsPlaying(false);
+    const handlePlaying = () => setPlayerStatus(`Escuchando a Coldplay`);
+    const handleWaiting = () => setPlayerStatus("Sintonizando galaxia...");
+    
+    const handleError = (e) => {
+      const error = audio.error;
+      console.error("Audio error event:", e);
+      let msg = "Error de red";
+      if (error && error.code === 4) msg = "Fuente no soportada";
+      setPlayerStatus(msg);
+      setIsPlaying(false);
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('waiting', handleWaiting);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('playing', handlePlaying);
+      audio.removeEventListener('waiting', handleWaiting);
+    };
+  }, [currentTrack]);
+
+  // Sincronizar Volumen
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  // LOGICA DE REPRODUCCIÓN MEJORADA
+  const playTrackSafe = (url) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Solo cambiamos la fuente si es necesario
+    if (audio.src !== url) {
+        audio.src = url;
+        audio.load();
+    }
+
+    // Intentamos reproducir inmediatamente dentro del hilo del evento del usuario
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(err => {
+            console.error("Bloqueo del navegador o error de carga:", err);
+            setPlayerStatus("Haz clic para desbloquear audio");
+            setIsPlaying(false);
+        });
+    }
+  };
+
+  const handleTogglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) {
+        // Si no hay canción, reproducimos la primera del álbum por defecto
+        handlePlayTrack(COLDPLAY_ALBUM.tracks[0]);
+        return;
+    }
+
+    if (!isPlaying) {
+        setIsPlaying(true);
+        playTrackSafe(currentTrack.audioUrl);
+    } else {
+        setIsPlaying(false);
+        audio.pause();
+        setPlayerStatus("SounDANI en Pausa");
+    }
+  };
+
+  const handlePlayTrack = (track) => {
+    const newTrack = {
+        ...track, 
+        artist: COLDPLAY_ALBUM.artist, 
+        cover: COLDPLAY_ALBUM.cover
+    };
+    setCurrentTrack(newTrack);
+    setIsPlaying(true);
+    
+    // Ejecución inmediata para saltar el bloqueo de autoplay
+    playTrackSafe(track.audioUrl);
+  };
+
+  const handleLogin = (userData) => { setUser(userData); setView('home'); };
+
+  const handleVolumeChange = (e) => {
+    const newVol = parseFloat(e.target.value);
+    setVolume(newVol);
+  };
+
+  return (
+    <div className="bg-[#0f051a] min-h-screen font-sans selection:bg-pink-500/30 overflow-x-hidden">
+      <StarBackground />
+      
+      {/* Elemento de audio persistente con configuración para máxima compatibilidad */}
+      <audio 
+        ref={audioRef} 
+        className="hidden" 
+        preload="auto" 
+        crossOrigin="anonymous"
+      />
+
+      {view !== 'welcome' && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-black/60 backdrop-blur-md px-6 py-2 rounded-full text-[10px] font-bold text-white shadow-2xl border border-white/10 uppercase tracking-widest transition-all">
+          {playerStatus}
+        </div>
+      )}
+
+      <main className="relative z-10">
+        {view === 'welcome' && <WelcomeScreen onStart={() => setView('login')} onLogin={() => setView('login')} />}
+        {view === 'login' && <LoginScreen onLogin={handleLogin} onBack={() => setView('welcome')} />}
+        {view === 'home' && (
+          <HomeScreen 
+            user={user} 
+            currentTrack={currentTrack} 
+            isPlaying={isPlaying} 
+            onTogglePlay={handleTogglePlay} 
+            onOpenAlbum={(album) => { setSelectedAlbum(album); setView('album'); }} 
+          />
+        )}
+        {view === 'album' && (
+          <AlbumScreen 
+            album={selectedAlbum} 
+            onBack={() => setView('home')} 
+            onPlayTrack={handlePlayTrack} 
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+          />
+        )}
+      </main>
+
+      {/* Mini Reproductor Sticky */}
+      {view !== 'login' && view !== 'welcome' && currentTrack && (
+        <div className="fixed bottom-8 left-6 right-6 z-50 animate-in slide-in-from-bottom-20 duration-500">
+          <div className="bg-[#1a0b2e]/95 backdrop-blur-3xl border border-white/10 p-4 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-5 shadow-[0_40px_80px_-20px_rgba(0,0,0,1)]">
+            <div className="flex items-center gap-5 w-full">
+              <div className={`w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden shadow-xl ${isPlaying ? 'animate-spin-slow' : ''}`}>
+                <img src={currentTrack.cover} className="w-full h-full object-cover" alt="" />
+              </div>
+              <div className="flex-1 min-w-0">
+                 <h4 className="font-black text-md truncate text-white mb-0.5">{currentTrack.title}</h4>
+                 <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full animate-pulse bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)]"></div>
+                   <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold truncate">{currentTrack.artist}</p>
+                 </div>
+                 <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 transition-all duration-300" 
+                      style={{ width: `${audioProgress}%` }}
+                    ></div>
+                 </div>
+              </div>
+              <button 
+                onClick={handleTogglePlay} 
+                className="w-14 h-14 rounded-2xl bg-white text-black flex-shrink-0 flex items-center justify-center shadow-2xl active:scale-90 transition-transform hover:bg-pink-100"
+              >
+                {isPlaying ? <Pause fill="black" size={24} /> : <Play fill="black" size={24} className="ml-1" />}
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-3 w-full md:w-auto md:border-l md:border-white/10 md:pl-5">
+              {volume === 0 ? <VolumeX size={20} className="text-white/40" /> : volume < 0.5 ? <Volume1 size={20} className="text-white/70" /> : <Volume2 size={20} className="text-white" />}
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.01" 
+                value={volume} 
+                onChange={handleVolumeChange} 
+                className="w-full md:w-24 accent-pink-500 bg-white/10 h-1.5 rounded-full appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin-slow 25s linear infinite; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes music-bar { 0%, 100% { height: 4px; } 50% { height: 16px; } }
+      `}} />
+    </div>
+  );
+}
